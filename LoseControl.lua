@@ -7778,6 +7778,13 @@ LCOptionsPanelFuncs.LCOptionsPanel_CheckButton_Enable = function(checkBox, isWhi
 		text:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b);
 	end
 end
+LCOptionsPanelFuncs.Register_LCOptionsPanel = function(optionsPanel)
+	local category
+	local layout
+	category, layout = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name, optionsPanel.name);
+	category.ID = optionsPanel.name
+	Settings.RegisterAddOnCategory(category);
+end
 
 -- Helper function to access to global variables with dynamic names that allow fields
 local function _GF(f)
@@ -12406,7 +12413,9 @@ function LoseControl:CheckStatusPartyFrameChange(value)
 			self:GetParent():SetWidth(frame.size)
 			self:GetParent():SetHeight(frame.size)
 			if (frame.anchor == "Blizzard" and not(self.useCompactPartyFrames)) then
-				SetPortraitToTexture(self.texture, self.textureicon)
+				if self.textureicon then
+					SetPortraitToTexture(self.texture, self.textureicon)
+				end
 				self:SetSwipeTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMaskSmall")
 				self:SetSwipeColor(0, 0, 0, frame.swipeAlpha*0.75)
 				self.iconInterruptBackground:SetTexture("Interface\\AddOns\\LoseControl\\Textures\\lc_interrupt_background_portrait.blp")
@@ -12416,7 +12425,9 @@ function LoseControl:CheckStatusPartyFrameChange(value)
 				end
 				SetInterruptIconsSize(self, frame.size)
 			else
-				self.texture:SetTexture(self.textureicon)
+				if self.textureicon then
+					self.texture:SetTexture(self.textureicon)
+				end
 				self:SetSwipeColor(0, 0, 0, frame.swipeAlpha)
 				self.iconInterruptBackground:SetTexture("Interface\\AddOns\\LoseControl\\Textures\\lc_interrupt_background.blp")
 				if self.MasqueGroup then
@@ -14316,7 +14327,7 @@ OptionsPanel.refresh = function() -- This method will run when the Interface Opt
 	UIDropDownMenu_SetSelectedValue(BlizzardLossOfControlRoot, GetCVar("lossOfControlRoot"))
 end
 
-InterfaceOptions_AddCategory(OptionsPanel)
+LCOptionsPanelFuncs.Register_LCOptionsPanel(OptionsPanel)
 
 -------------------------------------------------------------------------------
 -- Create sub-option frames
@@ -17128,7 +17139,12 @@ for _, v in ipairs({ "player", "pet", "target", "targettarget", "focus", "focust
 		UIDropDownMenu_SetWidth(AnchorFrameStrataDropDown, 140)
 	end
 
-	InterfaceOptions_AddCategory(OptionsPanelFrame)
+	local category
+	local layout
+
+	category, layout = Settings.RegisterCanvasLayoutCategory(OptionsPanelFrame, OptionsPanelFrame.name, OptionsPanelFrame.name);
+	category.ID = OptionsPanelFrame.name
+	Settings.RegisterAddOnCategory(category);
 end
 
 -------------------------------------------------------------------------------
@@ -17412,6 +17428,8 @@ function SlashCmd:customspells(operation, spellId, category)
 end
 
 SlashCmdList[addonName] = function(cmd)
+	local category
+	local layout
 	local args = {}
 	for word in cmd:lower():gmatch("%S+") do
 		tinsert(args, word)
@@ -17420,7 +17438,9 @@ SlashCmdList[addonName] = function(cmd)
 		SlashCmd[args[1]](unpack(args))
 	else
 		print(addonName, ": Type \"/lc help\" for more options.")
-		InterfaceOptionsFrame_OpenToCategory(OptionsPanel)
-		InterfaceOptionsFrame_OpenToCategory(OptionsPanel)
+		category, layout = Settings.RegisterCanvasLayoutCategory(OptionsPanel, OptionsPanel.name, OptionsPanel.name);
+		category.ID = OptionsPanel.name
+		Settings.OpenToCategory(category.ID)
+		Settings.OpenToCategory(category.ID)
 	end
 end
