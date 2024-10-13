@@ -20,9 +20,9 @@ local UnitIsUnit = UnitIsUnit
 local UnitHealth = UnitHealth
 local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
 local GetPlayerInfoByGUID = GetPlayerInfoByGUID
-local GetInventoryItemID = GetInventoryItemID
+local GetInventoryItemID = C_TooltipInfo.GetInventoryItemByID
 local GetInstanceInfo = GetInstanceInfo
-local GetSpellInfo = GetSpellInfo
+local GetSpellInfo = C_Spell.GetSpellInfo
 local GetTime = GetTime
 local GetCVar = GetCVar
 local GetCVarBool = GetCVarBool
@@ -47,7 +47,7 @@ local SetTexture = SetTexture
 local SetCooldown = SetCooldown
 local SetAlpha, SetPoint = SetAlpha, SetPoint
 local IsPlayerSpell = IsPlayerSpell
-local IsUsableSpell = IsUsableSpell
+local IsUsableSpell = C_Spell.IsSpellUsable
 local IsInInstance = IsInInstance
 local IsInRaid = IsInRaid
 local IsInGroup = IsInGroup
@@ -7778,6 +7778,13 @@ LCOptionsPanelFuncs.LCOptionsPanel_CheckButton_Enable = function(checkBox, isWhi
 		text:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b);
 	end
 end
+LCOptionsPanelFuncs.Register_LCOptionsPanel = function(optionsPanel)
+	local category
+	local layout
+	category, layout = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name, optionsPanel.name);
+	category.ID = optionsPanel.name
+	Settings.RegisterAddOnCategory(category);
+end
 
 -- Helper function to access to global variables with dynamic names that allow fields
 local function _GF(f)
@@ -12406,7 +12413,9 @@ function LoseControl:CheckStatusPartyFrameChange(value)
 			self:GetParent():SetWidth(frame.size)
 			self:GetParent():SetHeight(frame.size)
 			if (frame.anchor == "Blizzard" and not(self.useCompactPartyFrames)) then
-				SetPortraitToTexture(self.texture, self.textureicon)
+				if self.textureicon then
+					SetPortraitToTexture(self.texture, self.textureicon)
+				end
 				self:SetSwipeTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMaskSmall")
 				self:SetSwipeColor(0, 0, 0, frame.swipeAlpha*0.75)
 				self.iconInterruptBackground:SetTexture("Interface\\AddOns\\LoseControl\\Textures\\lc_interrupt_background_portrait.blp")
@@ -12416,7 +12425,9 @@ function LoseControl:CheckStatusPartyFrameChange(value)
 				end
 				SetInterruptIconsSize(self, frame.size)
 			else
-				self.texture:SetTexture(self.textureicon)
+				if self.textureicon then
+					self.texture:SetTexture(self.textureicon)
+				end
 				self:SetSwipeColor(0, 0, 0, frame.swipeAlpha)
 				self.iconInterruptBackground:SetTexture("Interface\\AddOns\\LoseControl\\Textures\\lc_interrupt_background.blp")
 				if self.MasqueGroup then
@@ -12557,7 +12568,7 @@ function LoseControl:COMBAT_LOG_EVENT_UNFILTERED()
 							local shamTranquilAirBuff = false
 							local _, destClass = GetPlayerInfoByGUID(destGUID)
 							for i = 1, 120 do
-								local _, _, _, _, _, _, _, _, _, auxSpellId = UnitAura(unitIdFromGUID, i)
+								local _, _, _, _, _, _, _, _, _, auxSpellId = C_TooltipInfo.GetUnitAura(unitIdFromGUID, i)
 								if not auxSpellId then break end
 								if (destClass == "DRUID") then
 									if auxSpellId == 234084 then	-- Moon and Stars (Druid) [Interrupted Mechanic Duration -70% (stacks)]
@@ -12577,7 +12588,7 @@ function LoseControl:COMBAT_LOG_EVENT_UNFILTERED()
 								end
 							end
 							for i = 1, 120 do
-								local _, _, _, _, _, _, _, _, _, auxSpellId = UnitAura(unitIdFromGUID, i, "HARMFUL")
+								local _, _, _, _, _, _, _, _, _, auxSpellId = C_TooltipInfo.GetUnitAura(unitIdFromGUID, i, "HARMFUL")
 								if not auxSpellId then break end
 								if auxSpellId == 372048 then		-- Oppressing Roar (Evoker) [Interrupted Mechanic Duration +20%/+50% (PvP/PvE) (stacks)]
 									if (self:ArePvpTalentsActive()) then
@@ -12665,7 +12676,7 @@ function LoseControl:COMBAT_LOG_EVENT_UNFILTERED()
 							end
 						end
 						for i = 1, 120 do
-							local _, _, auxCount, _, _, _, _, _, _, auxSpellId = UnitAura("player", i, "MAW");
+							local _, _, auxCount, _, _, _, _, _, _, auxSpellId = C_TooltipInfo.GetUnitAura("player", i, "MAW");
 							if not auxSpellId then break end
 							if (auxSpellId == 332861) then	-- Darkreaver's Ward Anima Power
 								if (auxCount == nil or auxCount <= 0) then
@@ -12858,7 +12869,7 @@ function LoseControl:UNIT_AURA(unitId, updatedAuras, typeUpdate) -- fired when a
 		for i = 1, 120 do
 			local localForceEventUnitAuraAtEnd = false
 			local newCategory
-			local name, icon, _, _, duration, expirationTime, auraSource, _, _, spellId = UnitAura(unitId, i, "HARMFUL")
+			local name, icon, _, _, duration, expirationTime, auraSource, _, _, spellId = C_TooltipInfo.GetUnitAura(unitId, i, "HARMFUL")
 			if not spellId then break end -- no more debuffs, terminate the loop
 			if debug then print(unitId, "debuff", i, ")", name, "|", duration, "|", expirationTime, "|", spellId) end
 
@@ -13017,7 +13028,7 @@ function LoseControl:UNIT_AURA(unitId, updatedAuras, typeUpdate) -- fired when a
 		for i = 1, 120 do
 			local localForceEventUnitAuraAtEnd = false
 			local newCategory
-			local name, icon, _, _, duration, expirationTime, auraSource, _, _, spellId, _, _, _, _, _, extraFlag1 = UnitAura(unitId, i) -- defaults to "HELPFUL" filter
+			local name, icon, _, _, duration, expirationTime, auraSource, _, _, spellId, _, _, _, _, _, extraFlag1 = C_TooltipInfo.GetUnitAura(unitId, i) -- defaults to "HELPFUL" filter
 			if not spellId then break end -- no more debuffs, terminate the loop
 			if debug then print(unitId, "buff", i, ")", name, "|", duration, "|", expirationTime, "|", spellId) end
 
@@ -13838,9 +13849,9 @@ local title = OptionsPanel.container:CreateFontString(nil, "ARTWORK", "GameFontN
 title:SetText(addonName)
 
 local subText = OptionsPanel.container:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-local notes = GetAddOnMetadata(addonName, "Notes-" .. GetLocale())
+local notes = C_AddOns.GetAddOnMetadata(addonName, "Notes-" .. GetLocale())
 if not notes then
-	notes = GetAddOnMetadata(addonName, "Notes")
+	notes = C_AddOns.GetAddOnMetadata(addonName, "Notes")
 end
 subText:SetText(notes)
 
@@ -14316,7 +14327,7 @@ OptionsPanel.refresh = function() -- This method will run when the Interface Opt
 	UIDropDownMenu_SetSelectedValue(BlizzardLossOfControlRoot, GetCVar("lossOfControlRoot"))
 end
 
-InterfaceOptions_AddCategory(OptionsPanel)
+LCOptionsPanelFuncs.Register_LCOptionsPanel(OptionsPanel)
 
 -------------------------------------------------------------------------------
 -- Create sub-option frames
@@ -17128,7 +17139,12 @@ for _, v in ipairs({ "player", "pet", "target", "targettarget", "focus", "focust
 		UIDropDownMenu_SetWidth(AnchorFrameStrataDropDown, 140)
 	end
 
-	InterfaceOptions_AddCategory(OptionsPanelFrame)
+	local category
+	local layout
+
+	category, layout = Settings.RegisterCanvasLayoutCategory(OptionsPanelFrame, OptionsPanelFrame.name, OptionsPanelFrame.name);
+	category.ID = OptionsPanelFrame.name
+	Settings.RegisterAddOnCategory(category);
 end
 
 -------------------------------------------------------------------------------
@@ -17412,6 +17428,8 @@ function SlashCmd:customspells(operation, spellId, category)
 end
 
 SlashCmdList[addonName] = function(cmd)
+	local category
+	local layout
 	local args = {}
 	for word in cmd:lower():gmatch("%S+") do
 		tinsert(args, word)
@@ -17420,7 +17438,9 @@ SlashCmdList[addonName] = function(cmd)
 		SlashCmd[args[1]](unpack(args))
 	else
 		print(addonName, ": Type \"/lc help\" for more options.")
-		InterfaceOptionsFrame_OpenToCategory(OptionsPanel)
-		InterfaceOptionsFrame_OpenToCategory(OptionsPanel)
+		category, layout = Settings.RegisterCanvasLayoutCategory(OptionsPanel, OptionsPanel.name, OptionsPanel.name);
+		category.ID = OptionsPanel.name
+		Settings.OpenToCategory(category.ID)
+		Settings.OpenToCategory(category.ID)
 	end
 end
